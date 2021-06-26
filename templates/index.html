@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8" name="viewport" content="width=device-width, initial-scale=1">
+        <title>Поисковик по телеграм-каналам</title>
+		<style>
+			div {
+				margin-left: 40px;
+			}
+			span {
+				margin-right: 10px;
+			}
+		</style>
+        <link rel="stylesheet" type="text/css" href="../static/style.css">
+	</head>
+	<body>
+		<div><h1>Поисковик по постам телеграм-каналов!</h1></div>
+		<form class="container" action="/search" method="post">
+			<div><h2>Что вы хотите найти?</h2></div>
+				<div class="row">
+					<span>Введите ваш запрос в поисковую строку</span>
+					<span>
+						<form method="POST">
+							<input type="text" name="query" placeholder="пишите маленькими буквами и без знаков препинания" size="60">
+							<input type="submit">
+						</form>
+					</span>
+				</div>
+		</form>
+	</body>
+</html>

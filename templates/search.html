@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ru">
+    <head>
+        <title>Поиск</title>
+        <style>
+                div {
+                    margin-left: 40px;
+                }
+                span {
+                    margin-right: 10px;
+                }
+                .channel-name {
+                    margin-top: 20px;
+                    font-size: 120%;
+                    font-weight: 600;
+                    color: darkblue;
+                }
+                a {
+                    text-decoration: none;
+                }
+        </style>
+    </head>
+    <body>
+
+            <h1>Результаты запроса</h1>
+
+            {% for res in result %}
+            <div class="channel-name"><a href="https://t.me/{{res["channel"]}}">{{res["channel"]}}</a></div>
+            <div class="post-text">{{res["post"]}}</div>
+            {% endfor %}
+    </body>
+</html>
