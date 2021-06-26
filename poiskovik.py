@@ -2,22 +2,21 @@ import sqlite3
 import pandas as pd
 import pymorphy2
 morph = pymorphy2.MorphAnalyzer()
+from tqdm.auto import tqdm
 import json
-
-
-#подключаемся к бд
-con = sqlite3.connect('telegram1.db')
+import re
+con = sqlite3.connect('telegram.db')
 c = con.cursor()
 con.commit()
 
 
-#функция лемматизации
+#функция для лемматизации токена через PyMorphy
 def lemmatization(token):
     p = morph.parse(token)[0]
     return p.normal_form
 
 
-#поиск точной формы
+#функция, которая, получая на вход токен, ищет точные совпадения
 def get_posts_for_token(qua):
     x = (qua, )
     
@@ -37,7 +36,7 @@ def get_posts_for_token(qua):
     return post_texts, channel_names
 
 
-#поиск всех форм, кроме поданной на поиск, по лемме
+#функция, которая, получая на вход токен, лемматизирует его, затем смотрит, какие у этой леммы есть токены, и выводит те посты, в которых эти токены есть
 def search_lemma(q):
     x = (q, )
     for row in c.execute("""SELECT id_token FROM tokens
@@ -65,7 +64,7 @@ def search_lemma(q):
     return post_texts, channel_names
 
 
-#поиск по всем формам синонимов
+#функция, которая, получая на вход токен, смотрит, какие у него есть синонимы, и выводит те посты, в которых эти синонимы есть
 def search_synonyms(q):
     x = (q, )
     for row in c.execute("""SELECT list_synonyms FROM tokens
@@ -88,24 +87,55 @@ def search_synonyms(q):
     return post_texts, channel_names
 
 
-#главная функция поиска
-def search(qua: str):
+#функция, которая выполняет поиск и сохраняет результат для одного токена
+def search_one(qua: str):
     q = qua.lower()
-    post_texts, channel_names = get_posts_for_token(q)
+    post_texts, channel_names = get_posts_for_token(q)  
+    a, b = search_lemma(q)
+    post_texts.extend(a)
+    channel_names.extend(b)
+    c, d = search_synonyms(q)
+    post_texts.extend(c)
+    channel_names.extend(d)
     if len(post_texts) == 0:
-        with open('posts.json', 'a', encoding='utf-8') as file:
+        with open('posts.json', 'w', encoding='utf-8') as file:
             json.dump('No posts yet...', file)
-    else:    
-        a, b = search_lemma(q)
-        post_texts.extend(a)
-        channel_names.extend(b)
-        c, d = search_synonyms(q)
-        post_texts.extend(c)
-        channel_names.extend(d)
+    else: 
         df_output = pd.DataFrame()
         df_output['post'] = post_texts
         df_output['channel'] = channel_names
+        df_output = df_output.drop_duplicates()
         output = df_output.to_dict('records')
         with open('posts.json', 'w', encoding='utf-8') as file:
             json.dump(output, file)
 
+
+#функция, которая ищет точные вхождения более, чем одного токена в тексты (для этого был специально создан столбец text_clear, в котором тексты очищены от пунктуации и приведены к нижнему регистру)
+def search_many_tokens(qua):
+    channel_ids = []
+    post_texts = []
+    for row in c.execute("""SELECT text, id_channel, text_clear FROM posts"""):
+        if qua in row[-1]:
+            post_texts.append(row[-3])
+            channel_ids.append(row[-2])
+ 
+    channel_names = []
+    for id_c in channel_ids:
+        z = (int(id_c), )
+        for row in c.execute("""SELECT channels.name FROM channels
+            WHERE channels_id=?""", z):
+            channel_names.append(row[-1])
+    return post_texts, channel_names
+
+
+#функция, выполняющая поиск для любого запроса
+def search(qua):
+    qua = str(qua).lower()
+    qua_l = qua.split()
+    if len(qua)==0:
+        with open('posts.json', 'w', encoding='utf-8') as file:
+            json.dump('Your query is empty :(', file)
+    elif len(qua)==1:
+        search_one(qua)
+    else:
+        search_many(qua)
